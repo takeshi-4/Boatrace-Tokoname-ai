@@ -158,6 +158,10 @@ def load_race_results(
         "windPow": [],
         "waveHight": [],
         "ruler": [],
+        # Parsed finish order (lanes). Used for course/venue bias downstream.
+        "finish1_lane": [],
+        "finish2_lane": [],
+        "finish3_lane": [],
     }
 
     for i in range(1, 7):
@@ -233,6 +237,27 @@ def load_race_results(
                     race_result_dict["windPow"].append(weather_info["windPow"])
                     race_result_dict["waveHight"].append(weather_info["waveHight"])
                     race_result_dict["ruler"].append(None)
+
+                    # Parse finish order from payout lines (e.g., "1-2-4" in 三連単)
+                    finish1 = finish2 = finish3 = None
+                    payout_lines = race_body[9:] if len(race_body) > 9 else []
+                    for line in payout_lines:
+                        m3 = re.search(r"([1-6])\s*-\s*([1-6])\s*-\s*([1-6])", line)
+                        if m3:
+                            finish1, finish2, finish3 = (
+                                _safe_int(m3.group(1)),
+                                _safe_int(m3.group(2)),
+                                _safe_int(m3.group(3)),
+                            )
+                            break
+                        if finish1 is None:
+                            m2 = re.search(r"([1-6])\s*-\s*([1-6])", line)
+                            if m2:
+                                finish1, finish2 = _safe_int(m2.group(1)), _safe_int(m2.group(2))
+                                # keep looking for third place in case a tri appears later
+                    race_result_dict["finish1_lane"].append(finish1)
+                    race_result_dict["finish2_lane"].append(finish2)
+                    race_result_dict["finish3_lane"].append(finish3)
 
                     racers_result = race_body[3:9]
                     tmp: Dict[int, Tuple[str, str]] = {i: ("", "") for i in range(1, 7)}
@@ -317,6 +342,10 @@ def make_race_result_df(
         os.path.dirname(os.path.abspath(__file__)),
         "../../data/beforeinfo/1*.csv",
     ),
+    odds3t_path=os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "../../data/odds3t/1*.csv",
+    ),
 ):
     df = load_race_results(race_results_file_path)
     print(f"[DEBUG] After load_race_results: 'weather' in df = {'weather' in df.columns}")
@@ -324,6 +353,7 @@ def make_race_result_df(
 
     racelist_df = load_race_results_supplementary_data(racelist_path)
     beforeinfo_df = load_race_results_supplementary_data(beforeinfo_path)
+    odds3t_df = load_race_results_supplementary_data(odds3t_path)
 
     key = ["date", "venue_clean", "raceNumber"]
 
@@ -337,6 +367,15 @@ def make_race_result_df(
 
     if not beforeinfo_df.empty:
         df = pd.merge(df, beforeinfo_df, how="left", on=key)
+
+    if not odds3t_df.empty:
+        # Clean odds column names (strip leading spaces)
+        odds3t_df.columns = [col.strip() if isinstance(col, str) else col for col in odds3t_df.columns]
+        # Clean venue column (remove spaces) and rename to venue_clean
+        if 'venue' in odds3t_df.columns:
+            odds3t_df['venue_clean'] = odds3t_df['venue'].str.replace('\u3000', '').str.replace(' ', '')
+            odds3t_df = odds3t_df.drop(columns=['venue'])
+        df = pd.merge(df, odds3t_df, how="left", on=key)
 
     # Restore weather columns from TXT (drop any CSV duplicates suffixed with _x or _y)
     print(f"[DEBUG] Before restoration: 'weather' in df = {'weather' in df.columns}")

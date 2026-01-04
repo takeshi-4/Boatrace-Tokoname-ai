@@ -1,0 +1,823 @@
+# ============================================================
+# PHASE 2: Factor × Feature Binding Configuration
+# ============================================================
+# This file defines the 9 canonical factors for Tokoname boatrace prediction.
+# Each factor maps raw dataframe columns to interpretable racing concepts.
+#
+# Philosophy: Interpretability-first. Every factor must explain WHY it matters.
+# No black boxes. Beginners should understand what the AI uses.
+
+# ============================================================
+# FACTOR 1: Race Environment
+# ============================================================
+race_environment:
+  id: 1
+  name: "Race Environment Factor"
+  explanation: "Weather, water, and venue conditions that affect all racers equally"
+  
+  # Raw columns from dataframe (exact names)
+  raw_columns:
+    - weather
+    - weather_x
+    - weather_y
+    - temperature
+    - water_temperature
+    - wind_speed
+    - windDir
+    - windPow
+    - wave_height
+    - waveHight
+  
+  # Derived features (calculated from raw columns)
+  derived_features:
+    - name: "wind_resistance_score"
+      formula: "windPow * direction_factor (headwind worse than tailwind)"
+      requires: ["windPow", "windDir"]
+    - name: "rough_water_score"
+      formula: "wave_height normalized to [0,1]"
+      requires: ["wave_height", "waveHight"]
+  
+  # Why this matters
+  importance: "Strong wind/waves favor experienced racers who can handle rough conditions. Calm weather favors raw speed."
+
+# ============================================================
+# FACTOR 2: Frame & Course
+# ============================================================
+frame_and_course:
+  id: 2
+  name: "Frame & Course Factor"
+  explanation: "Historical bias for inside/outside lanes at this venue"
+  
+  raw_columns:
+    # Course statistics (historical performance by starting position)
+    - CS_cource_1_1
+    - CS_cource_1_2
+    - CS_cource_1_3
+    - CS_cource_1_4
+    - CS_cource_1_5
+    - CS_cource_1_6
+    - CS_cource_1_7
+    - CS_cource_1_8
+    - CS_cource_1_9
+    - CS_cource_1_10
+    - CS_cource_1_11
+    - CS_cource_1_12
+    - CS_cource_1_13
+    # (same pattern for lanes 2-6)
+    - CS_cource_2_1
+    - CS_cource_2_2
+    - CS_cource_2_3
+    - CS_cource_2_4
+    - CS_cource_2_5
+    - CS_cource_2_6
+    - CS_cource_2_7
+    - CS_cource_2_8
+    - CS_cource_2_9
+    - CS_cource_2_10
+    - CS_cource_2_11
+    - CS_cource_2_12
+    - CS_cource_2_13
+    - CS_cource_3_1
+    - CS_cource_3_2
+    - CS_cource_3_3
+    - CS_cource_3_4
+    - CS_cource_3_5
+    - CS_cource_3_6
+    - CS_cource_3_7
+    - CS_cource_3_8
+    - CS_cource_3_9
+    - CS_cource_3_10
+    - CS_cource_3_11
+    - CS_cource_3_12
+    - CS_cource_3_13
+    - CS_cource_4_1
+    - CS_cource_4_2
+    - CS_cource_4_3
+    - CS_cource_4_4
+    - CS_cource_4_5
+    - CS_cource_4_6
+    - CS_cource_4_7
+    - CS_cource_4_8
+    - CS_cource_4_9
+    - CS_cource_4_10
+    - CS_cource_4_11
+    - CS_cource_4_12
+    - CS_cource_4_13
+    - CS_cource_5_1
+    - CS_cource_5_2
+    - CS_cource_5_3
+    - CS_cource_5_4
+    - CS_cource_5_5
+    - CS_cource_5_6
+    - CS_cource_5_7
+    - CS_cource_5_8
+    - CS_cource_5_9
+    - CS_cource_5_10
+    - CS_cource_5_11
+    - CS_cource_5_12
+    - CS_cource_5_13
+    - CS_cource_6_1
+    - CS_cource_6_2
+    - CS_cource_6_3
+    - CS_cource_6_4
+    - CS_cource_6_5
+    - CS_cource_6_6
+    - CS_cource_6_7
+    - CS_cource_6_8
+    - CS_cource_6_9
+    - CS_cource_6_10
+    - CS_cource_6_11
+    - CS_cource_6_12
+    - CS_cource_6_13
+  
+  derived_features:
+    - name: "inside_lane_advantage"
+      formula: "avg(CS_cource_1_*, CS_cource_2_*) - avg(CS_cource_5_*, CS_cource_6_*)"
+      requires: ["CS_cource_1_1", "CS_cource_2_1"]
+    - name: "lane_win_rate_by_position"
+      formula: "Historical 1st place rate for each starting lane"
+      requires:
+        - CS_cource_1_1
+        - CS_cource_2_1
+        - CS_cource_3_1
+        - CS_cource_4_1
+        - CS_cource_5_1
+        - CS_cource_6_1
+  
+  importance: "Tokoname has structural bias. Inside lanes (1-2) may have shorter path to first turn. This overrides racer skill in some races."
+
+# ============================================================
+# FACTOR 3: Racer Skill
+# ============================================================
+racer_skill:
+  id: 3
+  name: "Racer Skill Factor"
+  explanation: "Racer's historical win rates, place rates, and consistency"
+  
+  raw_columns:
+    # National performance
+    - win_rate_national_1
+    - win_rate_national_2
+    - win_rate_national_3
+    - win_rate_national_4
+    - win_rate_national_5
+    - win_rate_national_6
+    - place2Ratio_national_1
+    - place2Ratio_national_2
+    - place2Ratio_national_3
+    - place2Ratio_national_4
+    - place2Ratio_national_5
+    - place2Ratio_national_6
+    - place3Ratio_national_1
+    - place3Ratio_national_2
+    - place3Ratio_national_3
+    - place3Ratio_national_4
+    - place3Ratio_national_5
+    - place3Ratio_national_6
+    # Local (Tokoname) performance
+    - win_rate_local_1
+    - win_rate_local_2
+    - win_rate_local_3
+    - win_rate_local_4
+    - win_rate_local_5
+    - win_rate_local_6
+    - place2Ratio_local_1
+    - place2Ratio_local_2
+    - place2Ratio_local_3
+    - place2Ratio_local_4
+    - place2Ratio_local_5
+    - place2Ratio_local_6
+    - place3Ratio_local_1
+    - place3Ratio_local_2
+    - place3Ratio_local_3
+    - place3Ratio_local_4
+    - place3Ratio_local_5
+    - place3Ratio_local_6
+    # Racer IDs
+    - racer_1
+    - racer_2
+    - racer_3
+    - racer_4
+    - racer_5
+    - racer_6
+    - racer_id_1
+    - racer_id_2
+    - racer_id_3
+    - racer_id_4
+    - racer_id_5
+    - racer_id_6
+    - racerName_1
+    - racerName_2
+    - racerName_3
+    - racerName_4
+    - racerName_5
+    - racerName_6
+    - racerId_1
+    - racerId_2
+    - racerId_3
+    - racerId_4
+    - racerId_5
+    - racerId_6
+  
+  derived_features:
+    - name: "skill_gap_vs_field"
+      formula: "racer_win_rate - mean(field_win_rates)"
+      requires: ["win_rate_national_1"]
+    - name: "local_specialist_bonus"
+      formula: "win_rate_local - win_rate_national (positive = venue specialist)"
+      requires: ["win_rate_local_1", "win_rate_national_1"]
+  
+  importance: "Top-tier racers (A1 class) dominate. But venue-specific experience matters—local specialists can upset national stars."
+
+# ============================================================
+# FACTOR 4: Motor Performance
+# ============================================================
+motor_performance:
+  id: 4
+  name: "Motor Performance Factor"
+  explanation: "Engine quality based on recent performance stats"
+  
+  raw_columns:
+    - motorNo_1
+    - motorNo_2
+    - motorNo_3
+    - motorNo_4
+    - motorNo_5
+    - motorNo_6
+    - motor_place2Ratio_1
+    - motor_place2Ratio_2
+    - motor_place2Ratio_3
+    - motor_place2Ratio_4
+    - motor_place2Ratio_5
+    - motor_place2Ratio_6
+    - motor_place3Ratio_1
+    - motor_place3Ratio_2
+    - motor_place3Ratio_3
+    - motor_place3Ratio_4
+    - motor_place3Ratio_5
+    - motor_place3Ratio_6
+  
+  derived_features:
+    - name: "motor_win_proxy"
+      formula: "motor_place2Ratio (2nd place rate is proxy for competitiveness)"
+      requires: ["motor_place2Ratio_1"]
+    - name: "motor_gap_vs_field"
+      formula: "racer_motor_place2 - mean(field_motor_place2)"
+      requires: ["motor_place2Ratio_1"]
+  
+  importance: "Motors are randomly assigned but vary significantly. A 'hot' motor (high place2Ratio) can give a weaker racer an edge."
+
+# ============================================================
+# FACTOR 5: Boat
+# ============================================================
+boat:
+  id: 5
+  name: "Boat Factor"
+  explanation: "Hull performance and racer-boat fit"
+  
+  raw_columns:
+    - boatNo_1
+    - boatNo_2
+    - boatNo_3
+    - boatNo_4
+    - boatNo_5
+    - boatNo_6
+    - boat_place2Ratio_1
+    - boat_place2Ratio_2
+    - boat_place2Ratio_3
+    - boat_place2Ratio_4
+    - boat_place2Ratio_5
+    - boat_place2Ratio_6
+    - boat_place3Ratio_1
+    - boat_place3Ratio_2
+    - boat_place3Ratio_3
+    - boat_place3Ratio_4
+    - boat_place3Ratio_5
+    - boat_place3Ratio_6
+    - tilt_1
+    - tilt_2
+    - tilt_3
+    - tilt_4
+    - tilt_5
+    - tilt_6
+    - weight_1
+    - weight_2
+    - weight_3
+    - weight_4
+    - weight_5
+    - weight_6
+  
+  derived_features:
+    - name: "boat_quality_score"
+      formula: "boat_place2Ratio normalized"
+      requires: ["boat_place2Ratio_1"]
+    - name: "weight_adjusted_power"
+      formula: "motor_power / (weight + boat_weight) proxy"
+      requires: ["weight_1"]
+  
+  importance: "Lighter racers get speed advantage. Propeller tilt affects turning. Boat condition varies by maintenance."
+
+# ============================================================
+# FACTOR 6: Start Timing
+# ============================================================
+start_timing:
+  id: 6
+  name: "Start Timing Factor"
+  explanation: "Racer's starting technique and timing consistency"
+  
+  raw_columns:
+    - ave_start_time_1
+    - ave_start_time_2
+    - ave_start_time_3
+    - ave_start_time_4
+    - ave_start_time_5
+    - ave_start_time_6
+    - num_false_start_1
+    - num_false_start_2
+    - num_false_start_3
+    - num_false_start_4
+    - num_false_start_5
+    - num_false_start_6
+    - num_late_start_1
+    - num_late_start_2
+    - num_late_start_3
+    - num_late_start_4
+    - num_late_start_5
+    - num_late_start_6
+    - exhibition_ST_1
+    - exhibition_ST_2
+    - exhibition_ST_3
+    - exhibition_ST_4
+    - exhibition_ST_5
+    - exhibition_ST_6
+    - exhibition_flying_flag_1
+    - exhibition_flying_flag_2
+    - exhibition_flying_flag_3
+    - exhibition_flying_flag_4
+    - exhibition_flying_flag_5
+    - exhibition_flag_6
+    - exhibition_late_flag_1
+    - exhibition_late_flag_2
+    - exhibition_late_flag_3
+    - exhibition_late_flag_4
+    - exhibition_late_flag_5
+    - exhibition_late_flag_6
+    # Historical start timing stats
+    - CS_ST_1_1
+    - CS_ST_1_2
+    - CS_ST_1_3
+    - CS_ST_1_4
+    - CS_ST_1_5
+    - CS_ST_1_6
+    - CS_ST_1_7
+    - CS_ST_1_8
+    - CS_ST_1_9
+    - CS_ST_1_10
+    - CS_ST_1_11
+    - CS_ST_1_12
+    - CS_ST_1_13
+    - CS_ST_2_1
+    - CS_ST_2_2
+    - CS_ST_2_3
+    - CS_ST_2_4
+    - CS_ST_2_5
+    - CS_ST_2_6
+    - CS_ST_2_7
+    - CS_ST_2_8
+    - CS_ST_2_9
+    - CS_ST_2_10
+    - CS_ST_2_11
+    - CS_ST_2_12
+    - CS_ST_2_13
+    - CS_ST_3_1
+    - CS_ST_3_2
+    - CS_ST_3_3
+    - CS_ST_3_4
+    - CS_ST_3_5
+    - CS_ST_3_6
+    - CS_ST_3_7
+    - CS_ST_3_8
+    - CS_ST_3_9
+    - CS_ST_3_10
+    - CS_ST_3_11
+    - CS_ST_3_12
+    - CS_ST_3_13
+    - CS_ST_4_1
+    - CS_ST_4_2
+    - CS_ST_4_3
+    - CS_ST_4_4
+    - CS_ST_4_5
+    - CS_ST_4_6
+    - CS_ST_4_7
+    - CS_ST_4_8
+    - CS_ST_4_9
+    - CS_ST_4_10
+    - CS_ST_4_11
+    - CS_ST_4_12
+    - CS_ST_4_13
+    - CS_ST_5_1
+    - CS_ST_5_2
+    - CS_ST_5_3
+    - CS_ST_5_4
+    - CS_ST_5_5
+    - CS_ST_5_6
+    - CS_ST_5_7
+    - CS_ST_5_8
+    - CS_ST_5_9
+    - CS_ST_5_10
+    - CS_ST_5_11
+    - CS_ST_5_12
+    - CS_ST_5_13
+    - CS_ST_6_1
+    - CS_ST_6_2
+    - CS_ST_6_3
+    - CS_ST_6_4
+    - CS_ST_6_5
+    - CS_ST_6_6
+    - CS_ST_6_7
+    - CS_ST_6_8
+    - CS_ST_6_9
+    - CS_ST_6_10
+    - CS_ST_6_11
+    - CS_ST_6_12
+    - CS_ST_6_13
+  
+  derived_features:
+    - name: "start_timing_consistency"
+      formula: "stdev(ave_start_time) - lower is better (consistent timing)"
+      requires: ["ave_start_time_1"]
+    - name: "flying_penalty_risk"
+      formula: "num_false_start / total_starts (higher = riskier starter)"
+      requires: ["num_false_start_1"]
+  
+  importance: "CRITICAL. A 0.15s difference at start can determine race outcome. Aggressive starters risk penalties but gain position."
+
+# ============================================================
+# FACTOR 7: Race Scenario / Development
+# ============================================================
+race_scenario:
+  id: 7
+  name: "Race Scenario Factor"
+  explanation: "In-race positioning, turn strategy, and historical race development patterns"
+  
+  raw_columns:
+    # Historical race development (how racers progressed through race)
+    - CS_race_1_1
+    - CS_race_1_2
+    - CS_race_1_3
+    - CS_race_1_4
+    - CS_race_1_5
+    - CS_race_1_6
+    - CS_race_1_7
+    - CS_race_1_8
+    - CS_race_1_9
+    - CS_race_1_10
+    - CS_race_1_11
+    - CS_race_1_12
+    - CS_race_1_13
+    - CS_race_2_1
+    - CS_race_2_2
+    - CS_race_2_3
+    - CS_race_2_4
+    - CS_race_2_5
+    - CS_race_2_6
+    - CS_race_2_7
+    - CS_race_2_8
+    - CS_race_2_9
+    - CS_race_2_10
+    - CS_race_2_11
+    - CS_race_2_12
+    - CS_race_2_13
+    - CS_race_3_1
+    - CS_race_3_2
+    - CS_race_3_3
+    - CS_race_3_4
+    - CS_race_3_5
+    - CS_race_3_6
+    - CS_race_3_7
+    - CS_race_3_8
+    - CS_race_3_9
+    - CS_race_3_10
+    - CS_race_3_11
+    - CS_race_3_12
+    - CS_race_3_13
+    - CS_race_4_1
+    - CS_race_4_2
+    - CS_race_4_3
+    - CS_race_4_4
+    - CS_race_4_5
+    - CS_race_4_6
+    - CS_race_4_7
+    - CS_race_4_8
+    - CS_race_4_9
+    - CS_race_4_10
+    - CS_race_4_11
+    - CS_race_4_12
+    - CS_race_4_13
+    - CS_race_5_1
+    - CS_race_5_2
+    - CS_race_5_3
+    - CS_race_5_4
+    - CS_race_5_5
+    - CS_race_5_6
+    - CS_race_5_7
+    - CS_race_5_8
+    - CS_race_5_9
+    - CS_race_5_10
+    - CS_race_5_11
+    - CS_race_5_12
+    - CS_race_5_13
+    - CS_race_6_1
+    - CS_race_6_2
+    - CS_race_6_3
+    - CS_race_6_4
+    - CS_race_6_5
+    - CS_race_6_6
+    - CS_race_6_7
+    - CS_race_6_8
+    - CS_race_6_9
+    - CS_race_6_10
+    - CS_race_6_11
+    - CS_race_6_12
+    - CS_race_6_13
+    # Historical rank progression
+    - CS_rank_1_1
+    - CS_rank_1_2
+    - CS_rank_1_3
+    - CS_rank_1_4
+    - CS_rank_1_5
+    - CS_rank_1_6
+    - CS_rank_1_7
+    - CS_rank_1_8
+    - CS_rank_1_9
+    - CS_rank_1_10
+    - CS_rank_1_11
+    - CS_rank_1_12
+    - CS_rank_1_13
+    - CS_rank_2_1
+    - CS_rank_2_2
+    - CS_rank_2_3
+    - CS_rank_2_4
+    - CS_rank_2_5
+    - CS_rank_2_6
+    - CS_rank_2_7
+    - CS_rank_2_8
+    - CS_rank_2_9
+    - CS_rank_2_10
+    - CS_rank_2_11
+    - CS_rank_2_12
+    - CS_rank_2_13
+    - CS_rank_3_1
+    - CS_rank_3_2
+    - CS_rank_3_3
+    - CS_rank_3_4
+    - CS_rank_3_5
+    - CS_rank_3_6
+    - CS_rank_3_7
+    - CS_rank_3_8
+    - CS_rank_3_9
+    - CS_rank_3_10
+    - CS_rank_3_11
+    - CS_rank_3_12
+    - CS_rank_3_13
+    - CS_rank_4_1
+    - CS_rank_4_2
+    - CS_rank_4_3
+    - CS_rank_4_4
+    - CS_rank_4_5
+    - CS_rank_4_6
+    - CS_rank_4_7
+    - CS_rank_4_8
+    - CS_rank_4_9
+    - CS_rank_4_10
+    - CS_rank_4_11
+    - CS_rank_4_12
+    - CS_rank_4_13
+    - CS_rank_5_1
+    - CS_rank_5_2
+    - CS_rank_5_3
+    - CS_rank_5_4
+    - CS_rank_5_5
+    - CS_rank_5_6
+    - CS_rank_5_7
+    - CS_rank_5_8
+    - CS_rank_5_9
+    - CS_rank_5_10
+    - CS_rank_5_11
+    - CS_rank_5_12
+    - CS_rank_5_13
+    - CS_rank_6_1
+    - CS_rank_6_2
+    - CS_rank_6_3
+    - CS_rank_6_4
+    - CS_rank_6_5
+    - CS_rank_6_6
+    - CS_rank_6_7
+    - CS_rank_6_8
+    - CS_rank_6_9
+    - CS_rank_6_10
+    - CS_rank_6_11
+    - CS_rank_6_12
+    - CS_rank_6_13
+    # Frame (turn position) stats
+    - CS_frame_1_1
+    - CS_frame_1_2
+    - CS_frame_1_3
+    - CS_frame_1_4
+    - CS_frame_1_5
+    - CS_frame_1_6
+    - CS_frame_1_7
+    - CS_frame_1_8
+    - CS_frame_1_9
+    - CS_frame_1_10
+    - CS_frame_1_11
+    - CS_frame_1_12
+    - CS_frame_1_13
+    - CS_frame_2_1
+    - CS_frame_2_2
+    - CS_frame_2_3
+    - CS_frame_2_4
+    - CS_frame_2_5
+    - CS_frame_2_6
+    - CS_frame_2_7
+    - CS_frame_2_8
+    - CS_frame_2_9
+    - CS_frame_2_10
+    - CS_frame_2_11
+    - CS_frame_2_12
+    - CS_frame_2_13
+    - CS_frame_3_1
+    - CS_frame_3_2
+    - CS_frame_3_3
+    - CS_frame_3_4
+    - CS_frame_3_5
+    - CS_frame_3_6
+    - CS_frame_3_7
+    - CS_frame_3_8
+    - CS_frame_3_9
+    - CS_frame_3_10
+    - CS_frame_3_11
+    - CS_frame_3_12
+    - CS_frame_3_13
+    - CS_frame_4_1
+    - CS_frame_4_2
+    - CS_frame_4_3
+    - CS_frame_4_4
+    - CS_frame_4_5
+    - CS_frame_4_6
+    - CS_frame_4_7
+    - CS_frame_4_8
+    - CS_frame_4_9
+    - CS_frame_4_10
+    - CS_frame_4_11
+    - CS_frame_4_12
+    - CS_frame_4_13
+    - CS_frame_5_1
+    - CS_frame_5_2
+    - CS_frame_5_3
+    - CS_frame_5_4
+    - CS_frame_5_5
+    - CS_frame_5_6
+    - CS_frame_5_7
+    - CS_frame_5_8
+    - CS_frame_5_9
+    - CS_frame_5_10
+    - CS_frame_5_11
+    - CS_frame_5_12
+    - CS_frame_5_13
+    - CS_frame_6_1
+    - CS_frame_6_2
+    - CS_frame_6_3
+    - CS_frame_6_4
+    - CS_frame_6_5
+    - CS_frame_6_6
+    - CS_frame_6_7
+    - CS_frame_6_8
+    - CS_frame_6_9
+    - CS_frame_6_10
+    - CS_frame_6_11
+    - CS_frame_6_12
+    - CS_frame_6_13
+    # Exhibition course performance
+    - exhibition_cource_1
+    - exhibition_cource_2
+    - exhibition_cource_3
+    - exhibition_cource_4
+    - exhibition_cource_5
+    - exhibition_cource_6
+    - exhibitionTime_1
+    - exhibitionTime_2
+    - exhibitionTime_3
+    - exhibitionTime_4
+    - exhibitionTime_5
+    - exhibitionTime_6
+  
+  derived_features:
+    - name: "comeback_ability"
+      formula: "Historical rate of improving position from turn 1 to finish"
+      requires: ["CS_rank_1_1"]
+    - name: "first_turn_dominance"
+      formula: "Rate of holding/gaining position through first turn"
+      requires: ["CS_frame_1_1"]
+  
+  importance: "Early position is huge but not destiny. Some racers excel at late-race overtakes. First-turn strategy can make/break a race."
+
+# ============================================================
+# FACTOR 8: Risk & Reliability
+# ============================================================
+risk_and_reliability:
+  id: 8
+  name: "Risk & Reliability Factor"
+  explanation: "Racer's penalty history, disqualification risk, and consistency"
+  
+  raw_columns:
+    - num_false_start_1
+    - num_false_start_2
+    - num_false_start_3
+    - num_false_start_4
+    - num_false_start_5
+    - num_false_start_6
+    - num_late_start_1
+    - num_late_start_2
+    - num_late_start_3
+    - num_late_start_4
+    - num_late_start_5
+    - num_late_start_6
+    - exhibition_flying_flag_1
+    - exhibition_flying_flag_2
+    - exhibition_flying_flag_3
+    - exhibition_flying_flag_4
+    - exhibition_flying_flag_5
+    - exhibition_flying_flag_6
+    - exhibition_late_flag_1
+    - exhibition_late_flag_2
+    - exhibition_late_flag_3
+    - exhibition_late_flag_4
+    - exhibition_late_flag_5
+    - exhibition_late_flag_6
+  
+  derived_features:
+    - name: "penalty_risk_score"
+      formula: "(num_false_start + num_late_start) / recent_races"
+      requires: ["num_false_start_1", "num_late_start_1"]
+    - name: "reliability_score"
+      formula: "1 - (penalty_rate + dnf_rate)"
+      requires: ["num_false_start_1"]
+  
+  importance: "High-risk racers may have great speed but unreliable results. Conservative racers finish consistently but rarely win."
+
+# ============================================================
+# FACTOR 9: Odds & Value (Optional)
+# ============================================================
+odds_and_value:
+  id: 9
+  name: "Odds & Value Factor"
+  explanation: "Betting market sentiment and value opportunities from trifecta (三連単) odds"
+  
+  raw_columns:
+    # Trifecta odds - 120 possible finish combinations (1st-2nd-3rd)
+    # Sample columns (full list would be all 120 combinations)
+    - "1-2-3"
+    - "1-2-4"
+    - "1-2-5"
+    - "1-2-6"
+    - "1-3-2"
+    - "2-1-3"
+    - "3-1-2"
+    # ... (remaining 113 combinations available in odds3t data)
+    # Note: Column pattern is "frame1-frame2-frame3" representing finish order
+  
+  derived_features:
+    - name: "favorite_odds"
+      formula: "Minimum trifecta odds (crowd's strongest prediction)"
+      requires: ["1-2-3", "1-2-4", "1-2-5", "1-2-6"]
+    - name: "odds_variance"
+      formula: "Standard deviation of all trifecta odds (market uncertainty)"
+      requires: ["1-2-3", "1-2-4"]
+    - name: "value_score"
+      formula: "predicted_probability / implied_probability_from_odds"
+      requires: ["1-2-3"]
+  
+  importance: "Trifecta odds reflect crowd wisdom about finish order. Low odds = high confidence, high variance = uncertain race. Our model's deviations from market consensus can identify value bets."
+
+# ============================================================
+# Column Normalization Rules
+# ============================================================
+column_normalization:
+  # Handle common column name variations
+  aliases:
+    "weather": ["weather", "weather_x", "weather_y"]
+    "wave_height": ["wave_height", "waveHight"]
+    "racer_id_1": ["racer_id_1", "racer_id_1_x", "racer_id_1_y", "racer_1", "racer_1_x", "racer_1_y"]
+    "racer_id_2": ["racer_id_2", "racer_id_2_x", "racer_id_2_y", "racer_2", "racer_2_x", "racer_2_y"]
+    "racer_id_3": ["racer_id_3", "racer_id_3_x", "racer_id_3_y", "racer_3", "racer_3_x", "racer_3_y"]
+    "racer_id_4": ["racer_id_4", "racer_id_4_x", "racer_id_4_y", "racer_4", "racer_4_x", "racer_4_y"]
+    "racer_id_5": ["racer_id_5", "racer_id_5_x", "racer_id_5_y", "racer_5", "racer_5_x", "racer_5_y"]
+    "racer_id_6": ["racer_id_6", "racer_id_6_x", "racer_id_6_y", "racer_6", "racer_6_x", "racer_6_y"]
+  
+  # String cleaning rules
+  cleanup:
+    - "Strip whitespace"
+    - "Convert full-width to half-width"
+    - "Lowercase for comparison"
+    - "Remove duplicate spaces"
