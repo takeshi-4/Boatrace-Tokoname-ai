@@ -1,0 +1,29 @@
+# Training configuration for Tokoname baseline
+# Time-based split to avoid leakage.
+data:
+  venue: "常滑"
+  date_column: "date"
+  target_column: "finish1_lane"
+  race_id_columns: ["date", "raceNumber", "venue_clean"]
+  split:
+    train_end: "2019-09-30"
+    val_start: "2019-10-01"
+  top_k: 3
+
+model:
+  type: "lightgbm"  # preferred; will fallback to GradientBoosting if unavailable
+  params:
+    n_estimators: 200
+    learning_rate: 0.05
+    num_leaves: 31
+    max_depth: -1
+    subsample: 0.8
+    colsample_bytree: 0.8
+    random_state: 42
+
+evaluate:
+  calibration_bins: 10
+
+explain:
+  sample_size: 5
+  top_features: 5
